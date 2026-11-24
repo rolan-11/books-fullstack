@@ -11,6 +11,7 @@ export function BooksPage() {
 
   const userRole =
     (session?.user as { role?: string } | undefined)?.role ?? "user";
+  const isAdmin = Boolean(session && userRole === "admin");
 
   const loadBooks = async () => {
     try {
@@ -55,7 +56,7 @@ export function BooksPage() {
           </p>
         </div>
 
-        {session && (
+        {isAdmin && (
           <Link to="/books/new" className="btn btn-primary">
             + Agregar libro
           </Link>
@@ -70,17 +71,13 @@ export function BooksPage() {
         <div className="empty-state">
           <h2>Todavía no hay libros cargados</h2>
           <p style={{ marginBottom: "1.25rem" }}>
-            {session
+            {isAdmin
               ? "Cargá el primer libro para estrenar el catálogo."
-              : "Iniciá sesión para empezar a cargar libros."}
+              : "Cuando un administrador cargue libros aparecerán acá."}
           </p>
-          {session ? (
+          {isAdmin && (
             <Link to="/books/new" className="btn btn-primary">
               Crear primer libro
-            </Link>
-          ) : (
-            <Link to="/login" className="btn btn-primary">
-              Iniciar sesión
             </Link>
           )}
         </div>
@@ -89,7 +86,9 @@ export function BooksPage() {
           {books.map((book) => (
             <article key={book._id} className="card">
               <div>
-                <h2 className="card-title">{book.title}</h2>
+                <Link to={`/books/${book._id}`}>
+                  <h2 className="card-title">{book.title}</h2>
+                </Link>
                 <p className="card-author">{book.author}</p>
               </div>
 
@@ -103,7 +102,9 @@ export function BooksPage() {
               </p>
 
               <div className="card-meta">
-                <span className="price">${book.price.toLocaleString("es-AR")}</span>
+                <span className="price">
+                  ${book.price.toLocaleString("es-AR")}
+                </span>
                 <span
                   className={`status-tag ${
                     book.available ? "available" : "unavailable"
@@ -113,17 +114,23 @@ export function BooksPage() {
                 </span>
               </div>
 
-              {session && (
-                <div className="card-actions">
-                  <Link
-                    to={`/books/${book._id}/edit`}
-                    className="btn btn-secondary btn-sm"
-                    style={{ flex: 1 }}
-                  >
-                    Editar
-                  </Link>
+              <div className="card-actions">
+                <Link
+                  to={`/books/${book._id}`}
+                  className="btn btn-secondary btn-sm"
+                  style={{ flex: 1 }}
+                >
+                  Ver detalle
+                </Link>
 
-                  {userRole === "admin" && (
+                {isAdmin && (
+                  <>
+                    <Link
+                      to={`/books/${book._id}/edit`}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      Editar
+                    </Link>
                     <button
                       type="button"
                       onClick={() => handleDelete(book._id, book.title)}
@@ -131,9 +138,9 @@ export function BooksPage() {
                     >
                       Eliminar
                     </button>
-                  )}
-                </div>
-              )}
+                  </>
+                )}
+              </div>
             </article>
           ))}
         </div>

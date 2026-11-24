@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Navbar } from "./components/Navbar";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { BooksPage } from "./pages/BooksPage";
+import { BookDetailPage } from "./pages/BookDetailPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { BookFormPage } from "./pages/BookFormPage";
@@ -14,14 +15,15 @@ export default function App() {
       <Routes>
         {/* Rutas públicas */}
         <Route path="/" element={<BooksPage />} />
+        <Route path="/books/:id" element={<BookDetailPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* Rutas privadas (requieren sesión iniciada) */}
+        {/* Rutas protegidas por rol (solo admin) */}
         <Route
           path="/books/new"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <BookFormPage />
             </ProtectedRoute>
           }
@@ -29,13 +31,11 @@ export default function App() {
         <Route
           path="/books/:id/edit"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <BookFormPage />
             </ProtectedRoute>
           }
         />
-
-        {/* Ruta privada por rol (solo admin) */}
         <Route
           path="/admin"
           element={

@@ -12,15 +12,25 @@ import { createBookSchema, updateBookSchema } from "../schemas/book.schema.js";
 
 const router = Router();
 
-// Rutas públicas (cualquiera puede ver los libros)
+// Rutas públicas (cualquiera puede leer)
 router.get("/", getBooks);
 router.get("/:id", getBookById);
 
-// Rutas privadas (requieren haber iniciado sesión)
-router.post("/", requireAuth, validate(createBookSchema), createBook);
-router.put("/:id", requireAuth, validate(updateBookSchema), updateBook);
-
-// Ruta protegida por rol (solo usuarios con role: "admin")
+// Rutas de escritura protegidas (solo rol "admin")
+router.post(
+  "/",
+  requireAuth,
+  requireRole("admin"),
+  validate(createBookSchema),
+  createBook
+);
+router.put(
+  "/:id",
+  requireAuth,
+  requireRole("admin"),
+  validate(updateBookSchema),
+  updateBook
+);
 router.delete("/:id", requireAuth, requireRole("admin"), deleteBook);
 
 export default router;

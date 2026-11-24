@@ -25,16 +25,15 @@ export function Navbar() {
             Catálogo
           </NavLink>
 
-          {session && (
-            <NavLink to="/books/new" className="nav-link">
-              Nuevo libro
-            </NavLink>
-          )}
-
           {session && userRole === "admin" && (
-            <NavLink to="/admin" className="nav-link">
-              Panel Admin
-            </NavLink>
+            <>
+              <NavLink to="/books/new" className="nav-link">
+                Nuevo libro
+              </NavLink>
+              <NavLink to="/admin" className="nav-link">
+                Panel Admin
+              </NavLink>
+            </>
           )}
         </nav>
 
