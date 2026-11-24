@@ -13,8 +13,8 @@ export function AdminPage() {
     const loadBooks = async () => {
       try {
         setLoading(true);
-        const data = await getBooks();
-        setBooks(data);
+        const res = await getBooks({ limit: 50 });
+        setBooks(res.data);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Error al cargar los libros"

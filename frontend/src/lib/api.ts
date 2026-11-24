@@ -21,6 +21,24 @@ export interface BookInput {
   description: string;
 }
 
+export interface BooksQueryParams {
+  search?: string;
+  available?: "" | "true" | "false";
+  sort?: "newest" | "price_asc" | "price_desc" | "title_asc";
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedBooksResponse {
+  data: Book[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -29,11 +47,34 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return data as T;
 }
 
-export const getBooks = async (): Promise<Book[]> => {
-  const res = await fetch(`${API_BASE}/api/books`, {
+export const getBooks = async (
+  params: BooksQueryParams = {}
+): Promise<PaginatedBooksResponse> => {
+  const searchParams = new URLSearchParams();
+
+  if (params.search && params.search.trim()) {
+    searchParams.set("search", params.search.trim());
+  }
+  if (params.available === "true" || params.available === "false") {
+    searchParams.set("available", params.available);
+  }
+  if (params.sort) {
+    searchParams.set("sort", params.sort);
+  }
+  if (params.page) {
+    searchParams.set("page", String(params.page));
+  }
+  if (params.limit) {
+    searchParams.set("limit", String(params.limit));
+  }
+
+  const query = searchParams.toString();
+  const url = `${API_BASE}/api/books${query ? `?${query}` : ""}`;
+
+  const res = await fetch(url, {
     credentials: "include",
   });
-  return handleResponse<Book[]>(res);
+  return handleResponse<PaginatedBooksResponse>(res);
 };
 
 export const getBookById = async (id: string): Promise<Book> => {

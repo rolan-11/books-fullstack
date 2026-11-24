@@ -2,10 +2,54 @@ import type { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Book } from "../models/book.model.js";
 
-export const getBooks = async (_req: Request, res: Response): Promise<void> => {
+export const getBooks = async (req: Request, res: Response): Promise<void> => {
   try {
-    const books = await Book.find().sort({ createdAt: -1 });
-    res.json(books);
+    const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
+    const available = typeof req.query.available === "string" ? req.query.available : "";
+    const sort = typeof req.query.sort === "string" ? req.query.sort : "newest";
+
+    const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit ?? "6"), 10) || 6));
+    const skip = (page - 1) * limit;
+
+    const filter: Record<string, unknown> = {};
+
+    if (search) {
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(escapedSearch, "i");
+      filter.$or = [{ title: regex }, { author: regex }];
+    }
+
+    if (available === "true") {
+      filter.available = true;
+    } else if (available === "false") {
+      filter.available = false;
+    }
+
+    const sortOptions: Record<string, Record<string, 1 | -1>> = {
+      newest: { createdAt: -1 },
+      price_asc: { price: 1 },
+      price_desc: { price: -1 },
+      title_asc: { title: 1 },
+    };
+    const sortQuery = sortOptions[sort] ?? sortOptions.newest;
+
+    const [books, total] = await Promise.all([
+      Book.find(filter).sort(sortQuery).skip(skip).limit(limit),
+      Book.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    res.json({
+      data: books,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+      },
+    });
   } catch (error) {
     res.status(500).json({ message: "Error al obtener los libros", error });
   }
