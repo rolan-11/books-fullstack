@@ -1,28 +1,39 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { authClient } from "../lib/auth-client";
+
+const loginSchema = z.object({
+  email: z.string().email("Ingresá un correo electrónico válido"),
+  password: z.string().min(1, "La contraseña es obligatoria"),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState("");
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onSubmit = async (data: LoginFormValues) => {
+    setServerError("");
 
     const { error: authError } = await authClient.signIn.email({
-      email,
-      password,
+      email: data.email,
+      password: data.password,
     });
 
-    setLoading(false);
-
     if (authError) {
-      setError(authError.message || "Credenciales incorrectas");
+      setServerError(authError.message || "Credenciales incorrectas");
       return;
     }
 
@@ -30,16 +41,15 @@ export function LoginPage() {
   };
 
   const handleGitHubLogin = async () => {
-    setError("");
+    setServerError("");
     const { error: authError } = await authClient.signIn.social({
       provider: "github",
       callbackURL: window.location.origin,
     });
 
     if (authError) {
-      setError(
-        authError.message ||
-          "GitHub OAuth todavía no está configurado en el servidor"
+      setServerError(
+        authError.message || "No se pudo iniciar sesión con GitHub"
       );
     }
   };
@@ -49,22 +59,25 @@ export function LoginPage() {
       <div className="form-card">
         <h1 style={{ marginBottom: "0.35rem" }}>Iniciar sesión</h1>
         <p className="page-subtitle" style={{ marginBottom: "1.5rem" }}>
-          Ingresá para crear o editar libros en el catálogo.
+          Ingresá con tu cuenta para acceder a la plataforma.
         </p>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {serverError && <div className="alert alert-error">{serverError}</div>}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <div className="form-group">
             <label htmlFor="email">Correo electrónico</label>
             <input
               id="email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
               placeholder="tu@correo.com"
-              required
+              {...register("email")}
             />
+            {errors.email && (
+              <p style={{ color: "#f87171", fontSize: "0.82rem", marginTop: "0.3rem" }}>
+                {errors.email.message}
+              </p>
+            )}
           </div>
 
           <div className="form-group">
@@ -72,20 +85,23 @@ export function LoginPage() {
             <input
               id="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              required
+              {...register("password")}
             />
+            {errors.password && (
+              <p style={{ color: "#f87171", fontSize: "0.82rem", marginTop: "0.3rem" }}>
+                {errors.password.message}
+              </p>
+            )}
           </div>
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={isSubmitting}
             className="btn btn-primary"
             style={{ width: "100%", marginTop: "0.5rem" }}
           >
-            {loading ? "Ingresando..." : "Entrar"}
+            {isSubmitting ? "Ingresando..." : "Entrar"}
           </button>
         </form>
 

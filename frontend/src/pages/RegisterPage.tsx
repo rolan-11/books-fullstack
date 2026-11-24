@@ -1,36 +1,43 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { authClient } from "../lib/auth-client";
+
+const registerSchema = z.object({
+  name: z.string().trim().min(2, "El nombre debe tener al menos 2 caracteres"),
+  email: z.string().email("Ingresá un correo electrónico válido"),
+  password: z
+    .string()
+    .min(8, "La contraseña debe tener al menos 8 caracteres"),
+});
+
+type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export function RegisterPage() {
   const navigate = useNavigate();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState("");
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError("");
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+  });
 
-    if (password.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres");
-      return;
-    }
-
-    setLoading(true);
+  const onSubmit = async (data: RegisterFormValues) => {
+    setServerError("");
 
     const { error: authError } = await authClient.signUp.email({
-      name,
-      email,
-      password,
+      name: data.name,
+      email: data.email,
+      password: data.password,
     });
 
-    setLoading(false);
-
     if (authError) {
-      setError(authError.message || "No se pudo crear la cuenta");
+      setServerError(authError.message || "No se pudo crear la cuenta");
       return;
     }
 
@@ -42,22 +49,25 @@ export function RegisterPage() {
       <div className="form-card">
         <h1 style={{ marginBottom: "0.35rem" }}>Crear cuenta</h1>
         <p className="page-subtitle" style={{ marginBottom: "1.5rem" }}>
-          Registrate gratis para gestionar libros.
+          Registrate para explorar el catálogo con tu cuenta.
         </p>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {serverError && <div className="alert alert-error">{serverError}</div>}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <div className="form-group">
             <label htmlFor="name">Nombre</label>
             <input
               id="name"
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
               placeholder="Tu nombre"
-              required
+              {...register("name")}
             />
+            {errors.name && (
+              <p style={{ color: "#f87171", fontSize: "0.82rem", marginTop: "0.3rem" }}>
+                {errors.name.message}
+              </p>
+            )}
           </div>
 
           <div className="form-group">
@@ -65,11 +75,14 @@ export function RegisterPage() {
             <input
               id="email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
               placeholder="tu@correo.com"
-              required
+              {...register("email")}
             />
+            {errors.email && (
+              <p style={{ color: "#f87171", fontSize: "0.82rem", marginTop: "0.3rem" }}>
+                {errors.email.message}
+              </p>
+            )}
           </div>
 
           <div className="form-group">
@@ -77,21 +90,23 @@ export function RegisterPage() {
             <input
               id="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              minLength={8}
-              required
+              {...register("password")}
             />
+            {errors.password && (
+              <p style={{ color: "#f87171", fontSize: "0.82rem", marginTop: "0.3rem" }}>
+                {errors.password.message}
+              </p>
+            )}
           </div>
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={isSubmitting}
             className="btn btn-primary"
             style={{ width: "100%", marginTop: "0.5rem" }}
           >
-            {loading ? "Creando cuenta..." : "Registrarse"}
+            {isSubmitting ? "Creando cuenta..." : "Registrarse"}
           </button>
         </form>
 

@@ -1,22 +1,50 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { createBook, getBookById, updateBook } from "../lib/api";
+
+const bookSchema = z.object({
+  title: z.string().trim().min(2, "El título debe tener al menos 2 caracteres"),
+  author: z.string().trim().min(2, "El autor debe tener al menos 2 caracteres"),
+  price: z
+    .string()
+    .min(1, "El precio es obligatorio")
+    .refine((val) => !Number.isNaN(Number(val)) && Number(val) >= 0, {
+      message: "Ingresá un precio válido mayor o igual a 0",
+    }),
+  publishedDate: z.string().min(1, "La fecha de publicación es obligatoria"),
+  description: z.string().max(500, "Máximo 500 caracteres").optional(),
+  available: z.boolean(),
+});
+
+type BookFormValues = z.infer<typeof bookSchema>;
 
 export function BookFormPage() {
   const { id } = useParams<{ id: string }>();
   const isEditing = Boolean(id);
   const navigate = useNavigate();
 
-  const [title, setTitle] = useState("");
-  const [author, setAuthor] = useState("");
-  const [price, setPrice] = useState("");
-  const [publishedDate, setPublishedDate] = useState("");
-  const [available, setAvailable] = useState(true);
-  const [description, setDescription] = useState("");
-
   const [loading, setLoading] = useState(isEditing);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [serverError, setServerError] = useState("");
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<BookFormValues>({
+    resolver: zodResolver(bookSchema),
+    defaultValues: {
+      title: "",
+      author: "",
+      price: "",
+      publishedDate: "",
+      description: "",
+      available: true,
+    },
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -25,14 +53,16 @@ export function BookFormPage() {
       try {
         setLoading(true);
         const book = await getBookById(id);
-        setTitle(book.title);
-        setAuthor(book.author);
-        setPrice(String(book.price));
-        setPublishedDate(book.publishedDate.slice(0, 10));
-        setAvailable(book.available);
-        setDescription(book.description || "");
+        reset({
+          title: book.title,
+          author: book.author,
+          price: String(book.price),
+          publishedDate: book.publishedDate.slice(0, 10),
+          description: book.description || "",
+          available: book.available,
+        });
       } catch (err) {
-        setError(
+        setServerError(
           err instanceof Error ? err.message : "No se pudo cargar el libro"
         );
       } finally {
@@ -41,20 +71,18 @@ export function BookFormPage() {
     };
 
     void loadBook();
-  }, [id]);
+  }, [id, reset]);
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setSaving(true);
+  const onSubmit = async (data: BookFormValues) => {
+    setServerError("");
 
     const payload = {
-      title: title.trim(),
-      author: author.trim(),
-      price: Number(price),
-      publishedDate,
-      available,
-      description: description.trim(),
+      title: data.title.trim(),
+      author: data.author.trim(),
+      price: Number(data.price),
+      publishedDate: data.publishedDate,
+      available: data.available,
+      description: (data.description || "").trim(),
     };
 
     try {
@@ -65,11 +93,9 @@ export function BookFormPage() {
       }
       navigate("/");
     } catch (err) {
-      setError(
+      setServerError(
         err instanceof Error ? err.message : "Error al guardar el libro"
       );
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -93,19 +119,22 @@ export function BookFormPage() {
             : "Completá los campos para sumarlo al catálogo."}
         </p>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {serverError && <div className="alert alert-error">{serverError}</div>}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <div className="form-group">
             <label htmlFor="title">Título</label>
             <input
               id="title"
               type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
               placeholder="Ej: Clean Code"
-              required
+              {...register("title")}
             />
+            {errors.title && (
+              <p style={{ color: "#f87171", fontSize: "0.82rem", marginTop: "0.3rem" }}>
+                {errors.title.message}
+              </p>
+            )}
           </div>
 
           <div className="form-group">
@@ -113,11 +142,14 @@ export function BookFormPage() {
             <input
               id="author"
               type="text"
-              value={author}
-              onChange={(e) => setAuthor(e.target.value)}
               placeholder="Ej: Robert C. Martin"
-              required
+              {...register("author")}
             />
+            {errors.author && (
+              <p style={{ color: "#f87171", fontSize: "0.82rem", marginTop: "0.3rem" }}>
+                {errors.author.message}
+              </p>
+            )}
           </div>
 
           <div className="form-group">
@@ -127,11 +159,14 @@ export function BookFormPage() {
               type="number"
               min="0"
               step="0.01"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
               placeholder="15000"
-              required
+              {...register("price")}
             />
+            {errors.price && (
+              <p style={{ color: "#f87171", fontSize: "0.82rem", marginTop: "0.3rem" }}>
+                {errors.price.message}
+              </p>
+            )}
           </div>
 
           <div className="form-group">
@@ -139,10 +174,13 @@ export function BookFormPage() {
             <input
               id="publishedDate"
               type="date"
-              value={publishedDate}
-              onChange={(e) => setPublishedDate(e.target.value)}
-              required
+              {...register("publishedDate")}
             />
+            {errors.publishedDate && (
+              <p style={{ color: "#f87171", fontSize: "0.82rem", marginTop: "0.3rem" }}>
+                {errors.publishedDate.message}
+              </p>
+            )}
           </div>
 
           <div className="form-group">
@@ -150,29 +188,29 @@ export function BookFormPage() {
             <textarea
               id="description"
               rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
               placeholder="Resumen breve del libro (opcional)"
+              {...register("description")}
             />
+            {errors.description && (
+              <p style={{ color: "#f87171", fontSize: "0.82rem", marginTop: "0.3rem" }}>
+                {errors.description.message}
+              </p>
+            )}
           </div>
 
           <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={available}
-              onChange={(e) => setAvailable(e.target.checked)}
-            />
+            <input type="checkbox" {...register("available")} />
             <span>Disponible en stock</span>
           </label>
 
           <div style={{ display: "flex", gap: "0.75rem" }}>
             <button
               type="submit"
-              disabled={saving}
+              disabled={isSubmitting}
               className="btn btn-primary"
               style={{ flex: 1 }}
             >
-              {saving
+              {isSubmitting
                 ? "Guardando..."
                 : isEditing
                   ? "Guardar cambios"
