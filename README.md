@@ -1,76 +1,75 @@
-# BooksApp — Catálogo de Libros Full-Stack
+# Books Fullstack — Gestión de Biblioteca
 
-Aplicación web full-stack para gestionar un catálogo de libros con autenticación (correo/contraseña y GitHub OAuth) y control de acceso basado en roles (`user` y `admin`).
+Aplicación web full-stack para la gestión de un catálogo de libros con autenticación mediante Better Auth (Email/Password y GitHub OAuth), control de acceso por roles (`admin` / `user`), validación de formularios con React Hook Form + Zod y despliegue en producción en Render.
 
-## Tecnologías utilizadas
+## Enlaces de Producción
 
-### Backend
-- **Node.js + Express + TypeScript**
-- **MongoDB Atlas + Mongoose** (persistencia de datos)
-- **Better Auth** (autenticación, sesiones por cookies y OAuth con GitHub)
-- **Zod** (validación de esquemas y requests)
+* **Frontend (Static Site):** https://books-frontend-ib7q.onrender.com
+* **Backend (Web Service):** https://books-backend-k4cf.onrender.com
+* **Repositorio:** https://github.com/rolan-11/books-fullstack
 
-### Frontend
-- **React + TypeScript + Vite**
-- **React Router DOM** (rutas públicas, privadas y protegidas por rol)
-- **Better Auth Client** (`better-auth/react`)
+> **Nota:** El backend corre en el plan gratuito de Render, por lo que la primera solicitud tras un período de inactividad puede demorar alrededor de 50 segundos mientras el servicio se reactiva.
 
-## Estructura del proyecto
+## Stack Tecnológico
 
-```text
-books-fullstack/
-├── backend/    # API REST, modelos, middlewares de auth/roles y Better Auth
-└── frontend/   # Interfaz web en React + Vite con proxy hacia la API
-```
+* **Frontend:** React, TypeScript, Vite, React Router, React Hook Form, Zod.
+* **Backend:** Node.js, Express 5, TypeScript, Mongoose, Zod.
+* **Base de datos:** MongoDB Atlas.
+* **Autenticación:** Better Auth (Email/Password + GitHub OAuth).
+* **Despliegue:** Render (Web Service para el backend y Static Site con rewrites `/api/*` y `/*` para el frontend).
 
-## Control de acceso y rutas
+## Rutas y Permisos
 
-| Nivel de acceso | Frontend | Backend (API) |
+| Ruta | Acceso | Descripción |
 | :--- | :--- | :--- |
-| **Público** | `/`, `/login`, `/register` | `GET /api/books`, `GET /api/books/:id`, `GET /api/health` |
-| **Privado (sesión iniciada)** | `/books/new`, `/books/:id/edit` | `GET /api/me`, `POST /api/books`, `PUT /api/books/:id` |
-| **Solo Administrador (`admin`)** | `/admin` (Panel Admin) y botón Eliminar | `DELETE /api/books/:id` |
+| `/` | Público | Listado y búsqueda de libros del catálogo |
+| `/books/:id` | Público | Vista de detalle de un libro |
+| `/login` | Público | Inicio de sesión (Email/Password y GitHub OAuth) |
+| `/register` | Público | Registro de nuevos usuarios |
+| `/books/new` | Solo `admin` | Formulario para crear un libro |
+| `/books/:id/edit` | Solo `admin` | Formulario para editar un libro existente |
+| `/admin` | Solo `admin` | Panel de administración |
 
-## Variables de entorno
+## Usuarios de Prueba
 
-Creá un archivo `.env` dentro de la carpeta `backend/` con la siguiente configuración:
+| Rol | Email | Contraseña |
+| :--- | :--- | :--- |
+| **Administrador** (`admin`) | `admin@books.com` | `Admin1234` |
+| **Usuario estándar** (`user`) | `user@books.com` | `User1234` |
+
+*(También se puede iniciar sesión directamente con cualquier cuenta de GitHub desde el botón **Continuar con GitHub**).*
+
+## Variables de Entorno (`backend/.env`)
 
 ```env
-PORT=3000
 MONGODB_URI=tu_uri_de_mongodb_atlas
-BETTER_AUTH_SECRET=tu_clave_secreta_larga
+BETTER_AUTH_SECRET=tu_clave_secreta
 BETTER_AUTH_URL=http://localhost:5173
 GITHUB_CLIENT_ID=tu_github_client_id
 GITHUB_CLIENT_SECRET=tu_github_client_secret
+NODE_ENV=development
 ```
 
-> Para GitHub OAuth, configurá en tu OAuth App de GitHub la **Homepage URL** como `http://localhost:5173` y la **Redirect URI** como `http://localhost:5173/api/auth/callback/github`.
+## Ejecución Local
 
-## Instalación y ejecución local
+1. **Clonar el repositorio:**
+   ```bash
+   git clone [https://github.com/rolan-11/books-fullstack.git](https://github.com/rolan-11/books-fullstack.git)
+   cd books-fullstack
+   ```
 
-El proyecto requiere correr backend y frontend en **dos terminales en paralelo**.
+2. **Levantar el Backend:**
+   ```bash
+   cd backend
+   npm install
+   npm run dev
+   ```
 
-### 1. Backend
-```bash
-cd backend
-npm install
-npm run dev
-```
-El servidor queda escuchando en `http://localhost:3000`.
+3. **Levantar el Frontend (en otra terminal):**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
 
-### 2. Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
-La aplicación web queda disponible en `http://localhost:5173` (con proxy automático hacia `/api` en el puerto `3000`).
-
-## Asignar rol de Administrador
-
-Por defecto, cada usuario nuevo se registra con rol `user`. Para habilitar el rol `admin`:
-
-1. Ingresá a **MongoDB Atlas → Data Explorer**.
-2. Abrí la colección **`user`** dentro de tu base de datos.
-3. Editá el documento del usuario y cambiá el campo `"role"` de `"user"` a `"admin"`.
-4. Recargá la aplicación (o cerrá sesión y volvé a entrar) para ver el **Panel Admin** y la opción de eliminar libros.
+La aplicación quedará disponible en `http://localhost:5173`.
